@@ -5,12 +5,12 @@ from psycopg2.extras import RealDictCursor
 
 app = FastAPI()
 
-# Root route for a friendly landing page
+# Root route
 @app.get("/")
 def read_root():
     return {"message": "NSE Stock Pipeline API is live!"}
 
-# Health check endpoint
+# Health check
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
@@ -32,10 +32,20 @@ def get_db_connection():
 def company_metrics(symbol: str, date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT * FROM company_metrics WHERE symbol = %s AND date = %s",
-        (symbol, date)
-    )
+    cur.execute("""
+        SELECT 
+            symbol,
+            date,
+            open::FLOAT,
+            close::FLOAT,
+            high::FLOAT,
+            low::FLOAT,
+            volume::BIGINT,
+            returns::FLOAT,
+            volatility::FLOAT
+        FROM company_metrics
+        WHERE symbol = %s AND date = %s
+    """, (symbol, date))
     result = cur.fetchall()
     cur.close()
     conn.close()
@@ -48,7 +58,17 @@ def company_metrics(symbol: str, date: str):
 def market_overview(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM market_overview WHERE date = %s", (date,))
+    cur.execute("""
+        SELECT 
+            date,
+            total_volume::BIGINT,
+            advancers::INT,
+            decliners::INT,
+            unchanged::INT,
+            market_cap::FLOAT
+        FROM market_overview
+        WHERE date = %s
+    """, (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
@@ -61,7 +81,14 @@ def market_overview(date: str):
 def top_gainers(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM top_gainers WHERE date = %s", (date,))
+    cur.execute("""
+        SELECT 
+            date,
+            symbol,
+            change_pct::FLOAT
+        FROM top_gainers
+        WHERE date = %s
+    """, (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
@@ -74,7 +101,14 @@ def top_gainers(date: str):
 def top_losers(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM top_losers WHERE date = %s", (date,))
+    cur.execute("""
+        SELECT 
+            date,
+            symbol,
+            change_pct::FLOAT
+        FROM top_losers
+        WHERE date = %s
+    """, (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
@@ -87,7 +121,14 @@ def top_losers(date: str):
 def volatility_leaders(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM volatility_leaders WHERE date = %s", (date,))
+    cur.execute("""
+        SELECT 
+            date,
+            symbol,
+            volatility::FLOAT
+        FROM volatility_leaders
+        WHERE date = %s
+    """, (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
@@ -100,7 +141,14 @@ def volatility_leaders(date: str):
 def sector_performance(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM sector_performance WHERE date = %s", (date,))
+    cur.execute("""
+        SELECT 
+            date,
+            sector,
+            change_pct::FLOAT
+        FROM sector_performance
+        WHERE date = %s
+    """, (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
