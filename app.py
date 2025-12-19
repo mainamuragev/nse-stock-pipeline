@@ -15,20 +15,20 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-# Database connection helper with error handling
+# Database connection helper with SSL, using env vars only
 def get_db_connection():
     try:
         conn = psycopg2.connect(
             dbname=os.getenv("DB_NAME"),
             user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASS"),
+            password=os.getenv("DB_PASS"),   # 🔑 pulled from env, not hard-coded
             host=os.getenv("DB_HOST"),
             port=os.getenv("DB_PORT"),
+            sslmode=os.getenv("DB_SSLMODE", "require"),
             cursor_factory=RealDictCursor
         )
         return conn
     except Exception as e:
-        # Raise a runtime error so our global handler can catch it
         raise RuntimeError(f"Database connection failed: {e}")
 
 # Helper to convert Decimal → float
@@ -47,6 +47,20 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": str(exc), "path": str(request.url.path)}
     )
+
+# Debug route to test DB connectivity
+@app.get("/api/debug/db")
+def debug_db():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT NOW()")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        return {"status": "ok", "db_time": str(result[0])}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 # Company metrics
 @app.get("/api/company/{symbol}/metrics/{date}")
