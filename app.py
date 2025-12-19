@@ -15,16 +15,21 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
+# Database connection helper with error handling
 def get_db_connection():
-    conn = psycopg2.connect(
-        dbname=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT"),
-        cursor_factory=RealDictCursor
-    )
-    return conn
+    try:
+        conn = psycopg2.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASS"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT"),
+            cursor_factory=RealDictCursor
+        )
+        return conn
+    except Exception as e:
+        # Raise a runtime error so our global handler can catch it
+        raise RuntimeError(f"Database connection failed: {e}")
 
 # Helper to convert Decimal → float
 def json_safe(obj):
