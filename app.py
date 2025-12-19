@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from decimal import Decimal
 
 app = FastAPI()
 
@@ -27,132 +28,90 @@ def get_db_connection():
     )
     return conn
 
+# Helper to convert Decimal → float
+def json_safe(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    return obj
+
+def convert_result(result):
+    return [{k: json_safe(v) for k, v in row.items()} for row in result]
+
 # Company metrics
 @app.get("/api/company/{symbol}/metrics/{date}")
 def company_metrics(symbol: str, date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT 
-            symbol,
-            date,
-            open::FLOAT,
-            close::FLOAT,
-            high::FLOAT,
-            low::FLOAT,
-            volume::BIGINT,
-            returns::FLOAT,
-            volatility::FLOAT
-        FROM company_metrics
-        WHERE symbol = %s AND date = %s
-    """, (symbol, date))
+    cur.execute("SELECT * FROM company_metrics WHERE symbol = %s AND date = %s", (symbol, date))
     result = cur.fetchall()
     cur.close()
     conn.close()
     if not result:
         return {"symbol": symbol, "date": date, "metrics": [], "message": "No data available"}
-    return {"symbol": symbol, "date": date, "metrics": result}
+    return {"symbol": symbol, "date": date, "metrics": convert_result(result)}
 
 # Market overview
 @app.get("/api/market/overview/{date}")
 def market_overview(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT 
-            date,
-            total_volume::BIGINT,
-            advancers::INT,
-            decliners::INT,
-            unchanged::INT,
-            market_cap::FLOAT
-        FROM market_overview
-        WHERE date = %s
-    """, (date,))
+    cur.execute("SELECT * FROM market_overview WHERE date = %s", (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
     if not result:
         return {"date": date, "overview": None, "message": "No data available"}
-    return {"date": date, "overview": result}
+    return {"date": date, "overview": convert_result(result)}
 
 # Top gainers
 @app.get("/api/top-gainers/{date}")
 def top_gainers(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT 
-            date,
-            symbol,
-            change_pct::FLOAT
-        FROM top_gainers
-        WHERE date = %s
-    """, (date,))
+    cur.execute("SELECT * FROM top_gainers WHERE date = %s", (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
     if not result:
         return {"date": date, "gainers": [], "message": "No data available"}
-    return {"date": date, "gainers": result}
+    return {"date": date, "gainers": convert_result(result)}
 
 # Top losers
 @app.get("/api/top-losers/{date}")
 def top_losers(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT 
-            date,
-            symbol,
-            change_pct::FLOAT
-        FROM top_losers
-        WHERE date = %s
-    """, (date,))
+    cur.execute("SELECT * FROM top_losers WHERE date = %s", (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
     if not result:
         return {"date": date, "losers": [], "message": "No data available"}
-    return {"date": date, "losers": result}
+    return {"date": date, "losers": convert_result(result)}
 
 # Volatility leaders
 @app.get("/api/volatility-leaders/{date}")
 def volatility_leaders(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT 
-            date,
-            symbol,
-            volatility::FLOAT
-        FROM volatility_leaders
-        WHERE date = %s
-    """, (date,))
+    cur.execute("SELECT * FROM volatility_leaders WHERE date = %s", (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
     if not result:
         return {"date": date, "volatility_leaders": [], "message": "No data available"}
-    return {"date": date, "volatility_leaders": result}
+    return {"date": date, "volatility_leaders": convert_result(result)}
 
 # Sector performance
 @app.get("/api/sector-performance/{date}")
 def sector_performance(date: str):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("""
-        SELECT 
-            date,
-            sector,
-            change_pct::FLOAT
-        FROM sector_performance
-        WHERE date = %s
-    """, (date,))
+    cur.execute("SELECT * FROM sector_performance WHERE date = %s", (date,))
     result = cur.fetchall()
     cur.close()
     conn.close()
     if not result:
         return {"date": date, "sectors": [], "message": "No data available"}
-    return {"date": date, "sectors": result}
+    return {"date": date, "sectors": convert_result(result)}
 
